@@ -1,0 +1,14 @@
+%%encoding: US-ASCII
+
+uid: 1
+name: MainTask
+desc: finish it already damnit
+sub: 2 3
+%%
+uid: 2
+name: SubTask 1
+desc: make it fast
+%%
+uid: 3
+name: SubTask 2
+desc: make it beautiful

@@ -1,14 +1,24 @@
-.PHONY: all, clean
+.PHONY: all, debug, clean, distclean, touch
 
-all: librj/librj.a tgtd
+CFLAGS = -Wall
+INCLUDES = -Ilibrj
+LIBS = -Llibrj -lrj -lncurses
+
+all: debug1 =
+all: debug2 =
+all: touch librj/librj.a tgtd
+
+debug: debug1 = -ggdb
+debug: debug2 = debug
+debug: touch librj/librj.a tgtd
 
 tgtd: tgtd.c
-	gcc -Wall -L librj -l rj -o $@ $<
+	gcc $< -o $@ $(CFLAGS) $(debug1) -DNDEBUG $(INCLUDES) $(LIBS)
 
-librj/librj.a: librj/librj.c
-	make -C librj lib
+librj/librj.a: librj/rj.c
+	make -C librj $(debug2)
 
-librj/librj.c:
+librj/rj.c:
 	rm -rf librj || true
 	wget https://github.com/Yomin/librj/tarball/master -O librj.tar.gz
 	tar -xzf librj.tar.gz
@@ -16,7 +26,7 @@ librj/librj.c:
 	rm -f librj.tar.gz
 
 clean:
-	find . -maxdepth 1 ! -type d \( -perm -111 -or -name "*\.o" \) -exec rm {} \;
+	find -L . -maxdepth 1 ! -type d \( -perm -111 -or -name "*\.o" \) -exec rm {} \;
 ifeq ($(shell [ -d librj ] && echo lib || echo nolib), lib)
 	make -C librj clean
 endif
@@ -24,3 +34,7 @@ endif
 distclean:
 	find . ! -type d \( -perm -111 -or -name "*\.o" \) -exec rm {} \;
 	rm -rf lib* || true
+
+touch:
+	$(shell [ -f debug -a -z "$(debug1)" ] && { touch tgtd.c; rm debug; rm lib*/*.a; })
+	$(shell [ ! -f debug -a -n "$(debug1)" ] && { touch tgtd.c; touch debug; rm lib*/*.a; })

@@ -4,7 +4,7 @@ CFLAGS = -Wall
 INCLUDES = -Ilibrj
 LIBS = -Llibrj -lrj -lncurses
 
-all: debug1 =
+all: debug1 = -DNDEBUG
 all: debug2 =
 all: touch librj/librj.a tgtd
 
@@ -13,7 +13,7 @@ debug: debug2 = debug
 debug: touch librj/librj.a tgtd
 
 tgtd: tgtd.c
-	gcc $< -o $@ $(CFLAGS) $(debug1) -DNDEBUG $(INCLUDES) $(LIBS)
+	gcc $< -o $@ $(CFLAGS) $(debug1) $(INCLUDES) $(LIBS)
 
 librj/librj.a: librj/rj.c
 	make -C librj $(debug2)
@@ -36,5 +36,5 @@ distclean:
 	rm -rf lib* || true
 
 touch:
-	$(shell [ -f debug -a -z "$(debug1)" ] && { touch tgtd.c; rm debug; rm lib*/*.a; })
-	$(shell [ ! -f debug -a -n "$(debug1)" ] && { touch tgtd.c; touch debug; rm lib*/*.a; })
+	$(shell [ -f debug -a -z "$(debug2)" ] && { touch tgtd.c; rm debug; rm lib*/*.a; })
+	$(shell [ ! -f debug -a -n "$(debug2)" ] && { touch tgtd.c; touch debug; rm lib*/*.a; })

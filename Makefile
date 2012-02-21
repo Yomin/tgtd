@@ -6,14 +6,14 @@ LIBS = -Llibrj -lrj -lncurses
 
 all: debug1 = -DNDEBUG
 all: debug2 =
-all: touch librj/librj.a tgtd
+all: touch tgtd
 
 debug: debug1 = -ggdb
 debug: debug2 = debug
-debug: touch librj/librj.a tgtd
+debug: touch tgtd
 
-tgtd: tgtd.c
-	gcc $< -o $@ $(CFLAGS) $(debug1) $(INCLUDES) $(LIBS)
+tgtd: librj/librj.a tgtd.c
+	gcc tgtd.c -o $@ $(CFLAGS) $(debug1) $(INCLUDES) $(LIBS)
 
 librj/librj.a: librj/rj.c
 	make -C librj $(debug2)

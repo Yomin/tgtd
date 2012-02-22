@@ -28,19 +28,27 @@
 
 #define CONF_MAIN_X_PERCENT 75
 #define CONF_MAIN_Y_PERCENT 70
-#define CONF_WORK1_X_PERCENT 50
 
 #define TASK_THIS 0
 #define TASK_NEXT 1
 #define TASK_PREV 2
 
 int line;
-WINDOW *task, *work1, *work2, *work3, *side;
+WINDOW *taskA, *taskB, *sideA, *sideB;
+WINDOW *work1A, *work1B, *work2A, *work2B, *work3A, *work3B;
+char buf[4];
 
 struct load_state
 {
-    char *uid, *name, *desc, *sub;
+    char *uid, *name, *sub;
 };
+
+char* pad(char* str)
+{
+    buf[0] = '0'; buf[1] = '0'; buf[2] = '0';
+    strcpy(buf+3-strlen(str), str);
+    return buf;
+}
 
 void init(int info, char** field, char** value, void* vstate, struct recordjar* rj)
 {
@@ -48,14 +56,13 @@ void init(int info, char** field, char** value, void* vstate, struct recordjar* 
     
     if(!strcmp(*field, "uid")) state->uid = *value;
     else if(!strcmp(*field, "name")) state->name = *value;
-    else if(!strcmp(*field, "desc")) state->desc = *value;
     else if(!strcmp(*field, "sub")) state->sub = *value;
     
     if(info & RJ_INFO_FLD_LAST)
     {
-        if(state->name && state->desc)
-            wprintw(task, "%s: %s\n", state->name, state->desc);
-        if(state->sub && state->uid)
+        if(state->uid && state->name)
+            wprintw(taskB, "%s: %s\n", pad(state->uid), state->name);
+        if(state->uid && state->sub)
         {
             void* tmp = rj->rec;
             char* sub = strtok(state->sub, " ");
@@ -73,7 +80,6 @@ void init(int info, char** field, char** value, void* vstate, struct recordjar* 
             rj->rec = tmp;
         }
         state->name = 0;
-        state->desc = 0;
         state->sub = 0;
         state->uid = 0;
     }
@@ -83,16 +89,35 @@ void screen_init()
 {
     initscr();
     keypad(stdscr, 1);
+    noecho();
     int mainw = (COLS*CONF_MAIN_X_PERCENT)/100;
     int mainh = (LINES*CONF_MAIN_Y_PERCENT)/100;
-    int work1w = (COLS*CONF_WORK1_X_PERCENT)/100;
-    int workw = (COLS-work1w)/2;
-    task = newwin(mainh, mainw, 0, 0);
-    side = newwin(mainh, COLS-mainw, 0, mainw);
-    work1 = newwin(LINES-mainh, work1w, mainh, 0);
-    work2 = newwin(LINES-mainh, workw, mainh, work1w+workw*0);
-    work3 = newwin(LINES-mainh, workw, mainh, work1w+workw*1);
+    taskA = newwin(mainh, mainw, 0, 0);
+    taskB = newwin(mainh-2, mainw-2, 1, 1);
+    sideA = newwin(mainh, COLS-mainw, 0, mainw);
+    sideB = newwin(mainh-2, COLS-mainw-2, 1, mainw+1);
+    work1A = newwin(LINES-mainh, 2*mainw-COLS, mainh, 0);
+    work1B = newwin(LINES-mainh-2, 2*mainw-COLS-2, mainh+1, 1);
+    work2A = newwin(LINES-mainh, COLS-mainw, mainh, 2*mainw-COLS);
+    work2B = newwin(LINES-mainh-2, COLS-mainw-2, mainh+1, 2*mainw-COLS+1);
+    work3A = newwin(LINES-mainh, COLS-mainw, mainh, mainw);
+    work3B = newwin(LINES-mainh-2, COLS-mainw-2, mainh+1, mainw+1);
+    box(taskA, '|', '=');
+    box(sideA, '|', '=');
+    box(work1A, '|', '=');
+    box(work2A, '|', '=');
+    box(work3A, '|', '=');
+    mvwprintw(taskA, 0, 4, "[ Tasks ]");
+    mvwprintw(sideA, 0, 4, "[ Tags ]");
+    mvwprintw(work1A, 0, 4, "[ Details ]");
+    mvwprintw(work2A, 0, 4, "[ Children ]");
+    mvwprintw(work3A, 0, 4, "[ Parents ]");
     refresh();
+    wrefresh(taskA);
+    wrefresh(sideA);
+    wrefresh(work1A);
+    wrefresh(work2A);
+    wrefresh(work3A);
 }
 
 void task_show(int mode, struct recordjar* rj)
@@ -124,46 +149,45 @@ void task_show(int mode, struct recordjar* rj)
     }
     if(show)
     {
-        mvwchgat(task, prevline, 0, -1, A_NORMAL, 0, 0);
-        mvwchgat(task, line, 0, -1, A_REVERSE, 0, 0);
-        wrefresh(task);
+        mvwchgat(taskB, prevline, 0, -1, A_NORMAL, 0, 0);
+        mvwchgat(taskB, line, 0, -1, A_REVERSE, 0, 0);
+        wrefresh(taskB);
         name = rj_get("uid", uid, "name", "error", rj);
         desc = rj_get("uid", uid, "desc", "error", rj);
-        wclear(work1);
-        wprintw(work1, "= Task =\n%s: %s\n%s", uid, name, desc);
-        wrefresh(work1);
+        
+        wclear(work1B);
+        wprintw(work1B, "%s", desc);
+        wrefresh(work1B);
         
         void* tmp = rj->rec;
         
         char* sub = rj_get("uid", uid, "sub", 0, rj);
         if(sub)
             sub = strtok(sub, " ");
-        wclear(work2);
-        wprintw(work2, "= Children =\n");
+        wclear(work2B);
         while(sub)
         {
             name = rj_get("uid", sub, "name", "error", rj);
-            wprintw(work2, "%s: %s\n", sub, name);
+            wprintw(work2B, "%s: %s\n", pad(sub), name);
             sub = strtok(0, " ");
             if(sub)
                 sub[-1] = ' ';
         }
-        wrefresh(work2);
+        wrefresh(work2B);
         
         char* parent = rj_get("uid", uid, "parent", 0, rj);
         if(parent)
             parent = strtok(parent, " ");
-        wclear(work3);
-        wprintw(work3, "= Parents =\n");
+        wclear(work3B);
         while(parent)
         {
             name = rj_get("uid", parent, "name", "error", rj);
-            wprintw(work3, "%s: %s\n", parent, name);
+            wprintw(work3B, "%s: %s\n", pad(parent), name);
             parent = strtok(0, " ");
             if(parent)
                 parent[-1] = ' ';
         }
-        wrefresh(work3);
+        wrefresh(work3B);
         
         rj->rec = tmp;
     }
@@ -178,7 +202,6 @@ int main(int argc, char* argv[])
     
     struct load_state state;
     state.name = 0;
-    state.desc = 0;
     state.sub = 0;
     state.uid = 0;
     if(rj.size > 0)
